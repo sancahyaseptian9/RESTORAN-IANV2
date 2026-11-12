@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Restoran Ian (RTI)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0b0b0b;
+            color: #d1d5db;
+        }
+        /* Tema Hitam Emas */
+        .bg-gold { background-color: #d4af37; }
+        .text-gold { color: #d4af37; }
+        .border-gold { border-color: rgba(212, 175, 55, 0.3); }
+        .border-gold-focus:focus { border-color: #d4af37; outline: none; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-[#0b0b0b] text-gray-200 min-h-screen flex flex-col select-none">
+
+    <!-- Modal Login Google -->
+    <div id="login-modal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-6">
+        <div class="bg-[#141414] border border-gold p-8 rounded-3xl w-full max-w-xs shadow-2xl text-center">
+            <div class="text-4xl mb-3">👑</div>
+            <h2 class="text-xl font-bold mb-1 text-white">Restoran Ian (RTI)</h2>
+            <p class="text-xs text-gray-400 mb-6">Masuk dengan Google untuk terhubung dengan tim.</p>
+            
+            <button onclick="loginWithGoogle()" class="w-full bg-[#d4af37] text-black font-semibold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg hover:bg-[#c29b2d] transition">
+                <span>Masuk dengan Google</span>
+            </button>
+            <p id="login-error" class="text-[11px] text-red-400 mt-3 hidden"></p>
+        </div>
+    </div>
+
+    <!-- Header / Navbar -->
+    <header class="bg-[#141414] border-b border-gold px-4 py-3.5 flex justify-between items-center sticky top-0 z-30 shadow-md">
+        <div class="flex items-center gap-2">
+            <span class="text-lg">👑</span>
+            <h1 class="text-sm font-bold tracking-wider text-white uppercase">Restoran Ian <span class="text-gold text-xs font-normal">(RTI)</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-[11px] text-gray-400" id="user-display-name">@user</span>
+            <button onclick="logoutUser()" class="text-[10px] text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/20">Keluar</button>
+        </div>
+    </header>
+
+    <!-- Konten Utama -->
+    <main class="flex-1 max-w-md w-full mx-auto p-4 space-y-5 pb-24">
+        
+        <!-- Tombol Buka Form Input -->
+        <button onclick="toggleOrderModal(true)" class="w-full bg-[#d4af37] hover:bg-[#c29b2d] text-black font-bold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg transition">
+            <span>➕</span> Tambah Pesanan Baru
+        </button>
+
+        <!-- Ringkasan Statistik Singkat -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-[#141414] border border-gold p-3.5 rounded-2xl">
+                <div class="text-[10px] text-gray-400 uppercase font-semibold">Total Pesanan Aktif</div>
+                <div class="text-xl font-bold text-gold mt-1" id="stat-total-orders">0</div>
+            </div>
+            <div class="bg-[#141414] border border-gold p-3.5 rounded-2xl">
+                <div class="text-[10px] text-gray-400 uppercase font-semibold">Estimasi Pendapatan</div>
+                <div class="text-base font-bold text-white mt-1 truncate" id="stat-total-revenue">Rp 0</div>
+            </div>
+        </div>
+
+        <!-- Daftar Pesanan -->
+        <div>
+            <div class="text-xs font-semibold text-gold uppercase tracking-wider mb-3 flex justify-between items-center">
+                <span>Daftar Pesanan Masuk</span>
+                <span class="text-[10px] text-gray-400 font-normal">Sinkronisasi Real-time</span>
+            </div>
+            <div id="orders-list" class="space-y-3">
+                <div class="text-center text-xs text-gray-500 py-10 bg-[#141414] rounded-2xl border border-gold/20">Memuat data pesanan...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Form Tambah Pesanan -->
+    <div id="order-modal" class="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 hidden backdrop-blur-sm">
+        <div class="bg-[#141414] border border-gold w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-gold/20 pb-3">
+                <h2 class="text-sm font-bold text-white uppercase tracking-wider">Form Pesanan Baru</h2>
+                <button onclick="toggleOrderModal(false)" class="text-gray-400 hover:text-white text-sm font-bold">✕</button>
+            </div>
+
+            <form id="order-form" onsubmit="saveOrder(event)" class="space-y-3">
+                <div>
+                    <label class="text-[11px] text-gray-400 block mb-1">Nama Customer</label>
+                    <input type="text" id="input-customer" required placeholder="Contoh: Budi Santoso" class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-gray-400 block mb-1">Nama Makanan / Pesanan</label>
+                    <input type="text" id="input-menu" required placeholder="Contoh: Ayam Bakar Madu" class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">Harga Satuan (Rp)</label>
+                        <input type="number" id="input-price" required placeholder="25000" class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">Jumlah (Porsi)</label>
+                        <input type="number" id="input-qty" required value="1" min="1" class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-gray-400 block mb-1">Tanggal Pesan</label>
+                    <input type="date" id="input-order-date" required class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-gray-400 block mb-1">Tanggal Harus Diberikan (Deadline)</label>
+                    <input type="date" id="input-delivery-date" required class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-[#d4af37] hover:bg-[#c29b2d] text-black font-bold py-3 rounded-xl text-xs shadow-lg transition">Simpan Pesanan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase & Logika Aplikasi RTI -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCu6XJmJD4MHBFPfwohvy8ZkouoonN3uPw",
+            authDomain: "chatanyuk-9f2db.firebaseapp.com",
+            projectId: "chatanyuk-9f2db",
+            storageBucket: "chatanyuk-9f2db.firebasestorage.app",
+            messagingSenderId: "760813767940",
+            appId: "1:760813767940:web:999a798c74814d03be9451"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = "";
+
+        // Set tanggal default hari ini pada form
+        document.getElementById("input-order-date").valueAsDate = new Date();
+        document.getElementById("input-delivery-date").valueAsDate = new Date();
+
+        onAuthStateChanged(auth, (user) => {
+            const loginModal = document.getElementById("login-modal");
+            if (user) {
+                currentUser = user.displayName || user.email.split("@")[0];
+                loginModal.style.display = "none";
+                document.getElementById("user-display-name").innerText = "@" + currentUser;
+                loadOrders();
+            } else {
+                loginModal.style.display = "flex";
+            }
+        });
+
+        window.loginWithGoogle = async function() {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                document.getElementById("login-error").innerText = "Gagal login. Pastikan pop-up diizinkan.";
+                document.getElementById("login-error").classList.remove("hidden");
+            }
+        }
+
+        window.logoutUser = async function() {
+            await signOut(auth);
+            location.reload();
+        }
+
+        window.toggleOrderModal = function(show) {
+            const modal = document.getElementById("order-modal");
+            if (show) modal.classList.remove("hidden");
+            else modal.classList.add("hidden");
+        }
+
+        window.saveOrder = async function(e) {
+            e.preventDefault();
+            const customer = document.getElementById("input-customer").value.trim();
+            const menu = document.getElementById("input-menu").value.trim();
+            const price = Number(document.getElementById("input-price").value);
+            const qty = Number(document.getElementById("input-qty").value);
+            const orderDate = document.getElementById("input-order-date").value;
+            const deliveryDate = document.getElementById("input-delivery-date").value;
+
+            try {
+                await addDoc(collection(db, "restoran_ian_orders"), {
+                    customer,
+                    menu,
+                    price,
+                    qty,
+                    total: price * qty,
+                    orderDate,
+                    deliveryDate,
+                    addedBy: currentUser,
+                    createdAt: serverTimestamp()
+                });
+
+                document.getElementById("order-form").reset();
+                document.getElementById("input-order-date").valueAsDate = new Date();
+                document.getElementById("input-delivery-date").valueAsDate = new Date();
+                toggleOrderModal(false);
+            } catch (err) {
+                alert("Gagal menyimpan pesanan.");
+            }
+        }
+
+        window.deleteOrder = async function(id) {
+            if (confirm("Hapus catatan pesanan ini?")) {
+                try {
+                    await deleteDoc(doc(db, "restoran_ian_orders", id));
+                } catch (err) {
+                    alert("Gagal menghapus.");
+                }
+            }
+        }
+
+        function loadOrders() {
+            const listContainer = document.getElementById("orders-list");
+            const q = query(collection(db, "restoran_ian_orders"), orderBy("createdAt", "desc"));
+
+            onSnapshot(q, (snapshot) => {
+                listContainer.innerHTML = "";
+                let totalOrders = 0;
+                let totalRevenue = 0;
+
+                if (snapshot.empty) {
+                    listContainer.innerHTML = `<div class="text-center text-xs text-gray-500 py-10 bg-[#141414] rounded-2xl border border-gold/20">Belum ada pesanan tercatat.</div>`;
+                    document.getElementById("stat-total-orders").innerText = "0";
+                    document.getElementById("stat-total-revenue").innerText = "Rp 0";
+                    return;
+                }
+
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const id = docSnap.id;
+                    totalOrders++;
+                    totalRevenue += (data.total || 0);
+
+                    const card = document.createElement("div");
+                    card.className = "bg-[#141414] border border-gold/30 p-4 rounded-2xl space-y-2.5 shadow-md relative";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded-full font-bold">👤 ${escapeHtml(data.customer)}</span>
+                                <h3 class="font-bold text-sm text-white mt-1.5">${escapeHtml(data.menu)}</h3>
+                            </div>
+                            <button onclick="deleteOrder('${id}')" class="text-gray-500 hover:text-red-400 text-xs">🗑️</button>
+                        </div>
+
+                        <div class="flex justify-between text-xs border-t border-gold/10 pt-2 text-gray-300">
+                            <div>Jumlah: <span class="font-bold text-white">${data.qty} Porsi</span></div>
+                            <div class="font-bold text-gold">Rp ${data.total.toLocaleString('id-ID')}</div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 text-[10px] text-gray-400 bg-[#1c1c1e] p-2 rounded-xl border border-gold/10">
+                            <div>📅 Pesan: <span class="text-white">${data.orderDate}</span></div>
+                            <div>🚀 Kirim: <span class="text-gold font-semibold">${data.deliveryDate}</span></div>
+                        </div>
+                        <div class="text-[9px] text-gray-500 text-right">Ditambahkan oleh: @${escapeHtml(data.addedBy || 'admin')}</div>
+                    `;
+                    listContainer.appendChild(card);
+                });
+
+                document.getElementById("stat-total-orders").innerText = totalOrders;
+                document.getElementById("stat-total-revenue").innerText = "Rp " + totalRevenue.toLocaleString('id-ID');
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return "";
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>
