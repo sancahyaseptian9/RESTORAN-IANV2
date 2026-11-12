@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Restoran Ian (RTI)</title>
+    <title>Restoran Ian (RTI) - Login Akun</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,7 +12,6 @@
             background-color: #0b0b0b;
             color: #d1d5db;
         }
-        /* Tema Hitam Emas */
         .bg-gold { background-color: #d4af37; }
         .text-gold { color: #d4af37; }
         .border-gold { border-color: rgba(212, 175, 55, 0.3); }
@@ -23,17 +22,29 @@
 </head>
 <body class="bg-[#0b0b0b] text-gray-200 min-h-screen flex flex-col select-none">
 
-    <!-- Modal Login Google -->
+    <!-- Modal Login / Register Akun Custom -->
     <div id="login-modal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-6">
-        <div class="bg-[#141414] border border-gold p-8 rounded-3xl w-full max-w-xs shadow-2xl text-center">
-            <div class="text-4xl mb-3">👑</div>
-            <h2 class="text-xl font-bold mb-1 text-white">Restoran Ian (RTI)</h2>
-            <p class="text-xs text-gray-400 mb-6">Masuk dengan Google untuk terhubung dengan tim.</p>
+        <div class="bg-[#141414] border border-gold p-6 rounded-3xl w-full max-w-xs shadow-2xl text-center space-y-4">
+            <div class="text-3xl mb-1">👑</div>
+            <h2 class="text-lg font-bold text-white">Restoran Ian (RTI)</h2>
+            <p class="text-[11px] text-gray-400">Masuk atau daftar akun khusus kasir/karyawan.</p>
             
-            <button onclick="loginWithGoogle()" class="w-full bg-[#d4af37] text-black font-semibold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg hover:bg-[#c29b2d] transition">
-                <span>Masuk dengan Google</span>
-            </button>
-            <p id="login-error" class="text-[11px] text-red-400 mt-3 hidden"></p>
+            <div class="space-y-3 text-left">
+                <div>
+                    <label class="text-[10px] text-gray-400 block mb-1">Username</label>
+                    <input type="text" id="auth-username" placeholder="Contoh: kasir_ian" class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 block mb-1">Password</label>
+                    <input type="password" id="auth-password" placeholder="Minimal 6 karakter" class="w-full bg-[#1c1c1e] text-white text-xs rounded-xl px-3.5 py-2.5 border border-gold/30 border-gold-focus">
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-2">
+                <button onclick="handleLogin()" class="w-full bg-[#d4af37] hover:bg-[#c29b2d] text-black font-bold py-3 rounded-xl text-xs shadow-lg transition">Masuk</button>
+                <button onclick="handleRegister()" class="w-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-gold border border-gold/40 font-semibold py-2.5 rounded-xl text-xs transition">Buat Akun Baru</button>
+            </div>
+            <p id="auth-error" class="text-[11px] text-red-400 hidden"></p>
         </div>
     </div>
 
@@ -128,10 +139,10 @@
         </div>
     </div>
 
-    <!-- Firebase & Logika Aplikasi RTI -->
+    <!-- Firebase & Logika Aplikasi RTI (Email/Password Auth) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -146,9 +157,8 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
 
-        let currentUser = "";
+        let currentUsername = "";
 
         // Set tanggal default hari ini pada form
         document.getElementById("input-order-date").valueAsDate = new Date();
@@ -157,21 +167,60 @@
         onAuthStateChanged(auth, (user) => {
             const loginModal = document.getElementById("login-modal");
             if (user) {
-                currentUser = user.displayName || user.email.split("@")[0];
+                currentUsername = user.email.split("@")[0];
                 loginModal.style.display = "none";
-                document.getElementById("user-display-name").innerText = "@" + currentUser;
+                document.getElementById("user-display-name").innerText = "@" + currentUsername;
                 loadOrders();
             } else {
                 loginModal.style.display = "flex";
             }
         });
 
-        window.loginWithGoogle = async function() {
+        // Ubah username menjadi format email palsu untuk sistem Firebase Auth
+        function getFormattedEmail(username) {
+            const clean = username.trim().toLowerCase().replace(/\s+/g, "_");
+            return clean + "@restoranian.app";
+        }
+
+        window.handleRegister = async function() {
+            const u = document.getElementById("auth-username").value.trim();
+            const p = document.getElementById("auth-password").value;
+            const errEl = document.getElementById("auth-error");
+            errEl.classList.add("hidden");
+
+            if (!u || !p) {
+                errEl.innerText = "Username dan password wajib diisi!";
+                errEl.classList.remove("hidden");
+                return;
+            }
+
             try {
-                await signInWithPopup(auth, provider);
+                const email = getFormattedEmail(u);
+                await createUserWithEmailAndPassword(auth, email, p);
             } catch (error) {
-                document.getElementById("login-error").innerText = "Gagal login. Pastikan pop-up diizinkan.";
-                document.getElementById("login-error").classList.remove("hidden");
+                errEl.innerText = "Gagal buat akun: " + (error.message.includes("email-already-in-use") ? "Username sudah dipakai." : error.message);
+                errEl.classList.remove("hidden");
+            }
+        }
+
+        window.handleLogin = async function() {
+            const u = document.getElementById("auth-username").value.trim();
+            const p = document.getElementById("auth-password").value;
+            const errEl = document.getElementById("auth-error");
+            errEl.classList.add("hidden");
+
+            if (!u || !p) {
+                errEl.innerText = "Username dan password wajib diisi!";
+                errEl.classList.remove("hidden");
+                return;
+            }
+
+            try {
+                const email = getFormattedEmail(u);
+                await signInWithEmailAndPassword(auth, email, p);
+            } catch (error) {
+                errEl.innerText = "Gagal masuk: Username atau password salah.";
+                errEl.classList.remove("hidden");
             }
         }
 
@@ -204,7 +253,7 @@
                     total: price * qty,
                     orderDate,
                     deliveryDate,
-                    addedBy: currentUser,
+                    addedBy: currentUsername,
                     createdAt: serverTimestamp()
                 });
 
